@@ -175,7 +175,7 @@ class Process(BaseProcess):
         self._start_failed = False
 
     def __repr__(self):
-        return "{}({}, {})>".format(type(self).__name__, self._name, self.ident)
+        return f"{type(self).__name__}({self._name}, {self.ident})>"
 
     def run(self):
         """Run the target function of current process (in current process)
@@ -308,8 +308,7 @@ class Process(BaseProcess):
             exitcode = 1
             import traceback
             msg = traceback.format_exc()
-            sys.stderr.write('Process {} exception: {}\n'.format(
-                self.name, msg))
+            sys.stderr.write(f'Process {self.name} exception: {msg}\n')
         finally:
             try:
                 sys.stdout.flush()

@@ -54,7 +54,7 @@ class JobSpec(object):
         return self.__dict__ == other.__dict__
 
     def __repr__(self):
-        return '<JobSpec: {}>'.format(vars(self))
+        return f'<JobSpec: {vars(self)}>'
 
 
 class Job(object):

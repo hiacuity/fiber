@@ -45,12 +45,12 @@ class DataPartitioner():
         rng = random
         rng.seed(seed)
         data_len = len(data)
-        indexes = [x for x in range(0, data_len)]
+        indexes = list(range(data_len))
         rng.shuffle(indexes)
 
         for frac in sizes:
             part_len = int(frac * data_len)
-            self.partitions.append(indexes[0:part_len])
+            self.partitions.append(indexes[:part_len])
             indexes = indexes[part_len:]
 
     def use(self, partition):

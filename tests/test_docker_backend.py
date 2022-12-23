@@ -36,11 +36,10 @@ def get_ifce(target_ifce):
     ifces = psutil.net_if_addrs()
     ifce = ifces[target_ifce]
 
-    for sincaddr in ifce:
-        if sincaddr.family == socket.AF_INET:
-            return sincaddr
-
-    return None
+    return next(
+        (sincaddr for sincaddr in ifce if sincaddr.family == socket.AF_INET),
+        None,
+    )
 
 @pytest.mark.skipif(fiber.config.default_backend != "docker",
                     reason="skipped because current backend is not docker")

@@ -102,7 +102,7 @@ class TestManagers():
         assert res.get() == 42
 
         total = 4
-        managers = [MyManager() for i in range(total)]
+        managers = [MyManager() for _ in range(total)]
 
         [manager.start() for manager in managers]
 
@@ -116,4 +116,4 @@ class TestManagers():
         duration = time.time() - start_ts
 
         assert duration < 2
-        assert results == [42 for i in range(total)]
+        assert results == [42 for _ in range(total)]

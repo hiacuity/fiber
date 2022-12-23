@@ -25,15 +25,11 @@ available_backend = ['kubernetes', 'docker', 'local']
 
 
 def is_inside_kubenetes_job():
-    if os.environ.get("KUBERNETES_SERVICE_HOST", None):
-        return True
-    return False
+    return bool(os.environ.get("KUBERNETES_SERVICE_HOST", None))
 
 
 def is_inside_docker_job():
-    if os.environ.get("FIBER_BACKEND", "") == "docker":
-        return True
-    return False
+    return os.environ.get("FIBER_BACKEND", "") == "docker"
 
 
 BACKEND_TESTS = {
@@ -43,14 +39,14 @@ BACKEND_TESTS = {
 
 
 def auto_select_backend():
-    for backend_name, test in BACKEND_TESTS.items():
-        if test():
-            name = backend_name
-            break
-    else:
-        name = config.default_backend
-
-    return name
+    return next(
+        (
+            backend_name
+            for backend_name, test in BACKEND_TESTS.items()
+            if test()
+        ),
+        config.default_backend,
+    )
 
 
 def get_backend(name=None, **kwargs):
@@ -60,17 +56,12 @@ def get_backend(name=None, **kwargs):
     """
     global _backends
     if name is None:
-        if config.backend is not None:
-            name = config.backend
-        else:
-            name = auto_select_backend()
-    else:
-        if name not in available_backend:
-            raise mp.ProcessError("Invalid backend: {}".format(name))
+        name = config.backend if config.backend is not None else auto_select_backend()
+    elif name not in available_backend:
+        raise mp.ProcessError(f"Invalid backend: {name}")
 
     _backend = _backends.get(name, None)
     if _backend is None:
-        _backend = importlib.import_module("fiber.{}_backend".format(
-            name)).Backend(**kwargs)
+        _backend = importlib.import_module(f"fiber.{name}_backend").Backend(**kwargs)
         _backends[name] = _backend
     return _backend

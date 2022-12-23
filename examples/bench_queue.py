@@ -59,25 +59,25 @@ def bench(func, mplib=fiber):
     end_time = time.time()
     duration = end_time - start_time
     msg_per_sec = NUM / duration
- 
+
     doc = func.__doc__.strip() if func.__doc__ is not None else ""
-    print("Benchmark result - {} - {}\n{}".format(func.__name__, mplib.__name__, doc))
-    print("Duration: {}".format(duration))
-    print("Messages Per Second: {}".format(msg_per_sec))
-    print("Effective Data Rate: {} Mbps".format(msg_per_sec * len(MSG) * 8 / 1e6))
+    print(f"Benchmark result - {func.__name__} - {mplib.__name__}\n{doc}")
+    print(f"Duration: {duration}")
+    print(f"Messages Per Second: {msg_per_sec}")
+    print(f"Effective Data Rate: {msg_per_sec * len(MSG) * 8 / 1000000.0} Mbps")
 
 
 def pi_inside(p):
     x, y = random.random(), random.random()
-    return x * x + y * y < 1
+    return x**2 + y**2 < 1
 
 def pi_estimation(mp_lib):
     """Benchmark pi estimation with random number sampling."""
     NUM_SAMPLES = int(2e4)
 
     pool = mp_lib.Pool(processes=4)
-    count = sum(pool.map(pi_inside, range(0, NUM_SAMPLES)))
-    print("Pi is roughly {}".format(4.0 * count / NUM_SAMPLES))
+    count = sum(pool.map(pi_inside, range(NUM_SAMPLES)))
+    print(f"Pi is roughly {4.0 * count / NUM_SAMPLES}")
 
 def compare(func):
     """Run func with both multiprocessing and fiber."""
@@ -85,17 +85,17 @@ def compare(func):
     func(mp)
     end_time = time.time()
     duration1 = end_time - start_time
- 
+
     doc = func.__doc__.strip() if func.__doc__ is not None else ""
-    print("Compare result - {}\n{}".format(func.__name__, doc))
-    print("multiprocessing duration: {}".format(duration1))
+    print(f"Compare result - {func.__name__}\n{doc}")
+    print(f"multiprocessing duration: {duration1}")
 
     start_time = time.time()
     func(fiber)
     end_time = time.time()
     duration2 = end_time - start_time
- 
-    print("fiber duration: {}".format(duration2))
+
+    print(f"fiber duration: {duration2}")
 
     print("fiber vs. multiprocessing: {:.2%}".format(duration2 / duration1))
 

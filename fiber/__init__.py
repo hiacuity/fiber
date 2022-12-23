@@ -41,10 +41,7 @@ if os.environ.get("FIBER_WORKER", None) is None:
     logger.setLevel(fiber_config.log_level)
 
 
-if hasattr(sys, 'ps1'):
-    _in_interactive_console = True
-else:
-    _in_interactive_console = False
+_in_interactive_console = bool(hasattr(sys, 'ps1'))
 
 
 def reset():

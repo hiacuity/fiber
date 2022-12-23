@@ -148,18 +148,16 @@ class Config(object):
                     self.__dict__[k] = config["default"][k]
                 else:
                     raise ValueError(
-                        'unknown config key "{}" in {}. Valid keys: '
-                        '{}'.format(k, conf_file,
-                                    [key for key in self.__dict__]))
+                        f'unknown config key "{k}" in {conf_file}. Valid keys: {list(self.__dict__)}'
+                    )
 
         else:
             logger.debug("no fiber config file (%s) found", conf_file)
 
         # load environment variable overwrites
         for k in self.__dict__:
-            name = "FIBER_" + k.upper()
-            val = os.environ.get(name, None)
-            if val:
+            name = f"FIBER_{k.upper()}"
+            if val := os.environ.get(name, None):
                 self.__dict__[k] = val
 
         # rewrite values
@@ -176,7 +174,7 @@ class Config(object):
             self.ipc_active = str2bool(self.ipc_active)
 
         if isinstance(self.cpu_per_job, str):
-            self.cpu_per_job = int(self.cpu_per_job)
+            self.cpu_per_job = self.cpu_per_job
 
         if isinstance(self.mem_per_job, str):
             self.mem_per_job = int(self.mem_per_job)

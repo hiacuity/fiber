@@ -32,7 +32,7 @@ def put_queue(q, data):
 
 def get_queue(q_in, q_out, n):
     print("get_queue started", q_in, q_in.reader, q_in.writer)
-    for i in range(n):
+    for _ in range(n):
         d = q_in.get()
         q_out.put(d)
     time.sleep(1)
@@ -59,7 +59,6 @@ class TestZconnection():
 
     def test_zconn_with_mp(self):
         mp.Process()
-        pass
 
 def pipe_mp_worker(writer):
     import multiprocessing as mp
@@ -160,13 +159,12 @@ class TestQueue():
         n = 3
         procs = []
         try:
-            for i in range(n):
-                procs.append(fiber.Process(target=put_queue, args=(q, 10)))
+            procs.extend(fiber.Process(target=put_queue, args=(q, 10)) for _ in range(n))
             for p in procs:
                 p.start()
             for p in procs:
                 p.join()
-            for p in procs:
+            for _ in procs:
                 data = q.get()
                 assert data == 10
         finally:
@@ -177,7 +175,7 @@ class TestQueue():
         # Read and write multiple objects
         n = 10
         q = SimpleQueue()
-        p = fiber.Process(target=put_queue, args=(q, [i for i in range(n)]))
+        p = fiber.Process(target=put_queue, args=(q, list(range(n))))
         p.start()
         p.join()
         for i in range(n):
@@ -190,7 +188,7 @@ class TestQueue():
         n = 10
         q = SimpleQueue()
         q_out = SimpleQueue()
-        p1 = fiber.Process(target=put_queue, args=(q, [i for i in range(n)]))
+        p1 = fiber.Process(target=put_queue, args=(q, list(range(n))))
         p2 = fiber.Process(target=get_queue, args=(q, q_out, n))
         p1.start()
         p2.start()
@@ -223,7 +221,6 @@ class TestQueue():
         num_workers = 4
         multiplier = 600
         workers = []
-        results = []
         for i in range(num_workers):
             print("create worker", i)
             p = fiber.Process(target=worker, args=(inqueue, outqueue, i), daemon=True)
@@ -233,14 +230,13 @@ class TestQueue():
 
         # wait for all workers to connect
         time.sleep(1)
-        for i in range(num_workers * multiplier):
+        for _ in range(num_workers * multiplier):
             inqueue.put("work")
-        for i in range(num_workers * multiplier):
-            results.append(outqueue.get())
+        results = [outqueue.get() for _ in range(num_workers * multiplier)]
         stats = collections.Counter(results)
         total = num_workers * multiplier
         # send singals to all workers
-        for i in range(num_workers * multiplier):
+        for _ in range(num_workers * multiplier):
             inqueue.put("quit")
         for i in range(num_workers):
             workers[i].join()

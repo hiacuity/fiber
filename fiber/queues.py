@@ -146,7 +146,7 @@ class ZConnection(multiprocessing.connection._ConnectionBase):
             if getattr(self, "_name", None) is not None
             else self.dest_addr
         )
-        return '<ZConnection [{}, {}]>'.format(name, getattr(self, "_handle", None))
+        return f'<ZConnection [{name}, {getattr(self, "_handle", None)}]>'
 
     def _create_handle(self):
         logger.debug("%s _create_handle called", self)
@@ -227,13 +227,7 @@ class LazyZConnection(ZConnection):
         self._handle.send(buf)
 
     def _recv_bytes(self, maxsize=None):
-        # TODO(jiale) support maxsize
-        #msg = self._handle.recv_multipart()
-        # msg -> b'' b'message data' (because of ROUTER)
-        #data = msg[1]
-        data = self._handle.recv()
-
-        return data
+        return self._handle.recv()
 
     def __getstate__(self):
         return {"sock_type": self.sock_type,
@@ -268,10 +262,7 @@ def Pipe(duplex=True):
         write-only. By default, duplex is enabled.
     """
 
-    if duplex:
-        d = ProcessDevice("rw", "rw")
-    else:
-        d = ProcessDevice("r", "w")
+    d = ProcessDevice("rw", "rw") if duplex else ProcessDevice("r", "w")
     d.start()
 
     if duplex:
@@ -287,8 +278,7 @@ class SimpleQueuePush():
     the other end without explicitly pulling.
     """
     def __repr__(self):
-        return "SimpleQueuePush<reader:{}, writer: {}>".format(
-            self._reader_addr, self._writer_addr)
+        return f"SimpleQueuePush<reader:{self._reader_addr}, writer: {self._writer_addr}>"
 
     def __init__(self):
         self.done = False

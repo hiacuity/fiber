@@ -41,8 +41,7 @@ CONFIG = {}
 
 def get_backend(platform):
     from fiber.kubernetes_backend import Backend as K8sBackend
-    backend = K8sBackend(incluster=False)
-    return backend
+    return K8sBackend(incluster=False)
 
 
 def find_docker_files():
@@ -70,7 +69,7 @@ def select_docker_file(files):
 
         while True:
             end = len(files)
-            input_str = input("which docker file to use? [1-{}] ".format(end))
+            input_str = input(f"which docker file to use? [1-{end}] ")
 
             try:
                 num = int(input_str) - 1
@@ -79,11 +78,7 @@ def select_docker_file(files):
 
                 break
             except (TypeError, ValueError):
-                print(
-                    "Invalid input: {}. Please choose from [1-{}]".format(
-                        input_str, end
-                    )
-                )
+                print(f"Invalid input: {input_str}. Please choose from [1-{end}]")
                 continue
 
     return files[num]
@@ -104,7 +99,7 @@ def parse_file_path(path):
         return (None, path)
 
     if len(parts) > 2:
-        raise ValueError("Bad path: {}".format(path))
+        raise ValueError(f"Bad path: {path}")
 
     return (parts[0], parts[1])
 
@@ -142,10 +137,8 @@ def cp(src, dst):
     job = k8s_backend.create_job(job_spec)
     pod_name = job.data.metadata.name
 
-    print("launched pod: {}".format(pod_name))
-    exitcode = os.system(
-        "kubectl wait --for=condition=Ready pod/{}".format(pod_name)
-    )
+    print(f"launched pod: {pod_name}")
+    exitcode = os.system(f"kubectl wait --for=condition=Ready pod/{pod_name}")
 
     """
     status = k8s_backend.get_job_status(job)
@@ -158,13 +151,13 @@ def cp(src, dst):
     """
 
     if parts_src[0]:
-        new_src = "{}:{}".format(pod_name, parts_src[1])
+        new_src = f"{pod_name}:{parts_src[1]}"
         new_dst = dst
     elif parts_dst[0]:
         new_src = src
-        new_dst = "{}:{}".format(pod_name, parts_dst[1])
+        new_dst = f"{pod_name}:{parts_dst[1]}"
 
-    cmd = "kubectl cp {} {}".format(new_src, new_dst)
+    cmd = f"kubectl cp {new_src} {new_dst}"
     os.system(cmd)
 
     # k8s_backend.terminate_job(job)
@@ -196,7 +189,7 @@ def prompt_choices(choices, prompt):
 
         while True:
             end = len(choices)
-            input_str = input("{}? [1-{}] ".format(prompt, end))
+            input_str = input(f"{prompt}? [1-{end}] ")
 
             try:
                 num = int(input_str) - 1
@@ -205,11 +198,7 @@ def prompt_choices(choices, prompt):
                 break
 
             except (TypeError, ValueError):
-                print(
-                    "Invalid input: {}. Please choose from [1-{}]".format(
-                        input_str, end
-                    )
-                )
+                print(f"Invalid input: {input_str}. Please choose from [1-{end}]")
                 continue
 
     return choices[num]
@@ -219,8 +208,8 @@ class DockerImageBuilder:
     def __init__(self, registry=""):
         self.registry = registry
 
-    def get_docker_registry_image_name(image_base_name):
-        return image_base_name
+    def get_docker_registry_image_name(self):
+        return self
 
     def build(self):
         files = find_docker_files()
@@ -237,11 +226,10 @@ class DockerImageBuilder:
         self.image_base_name = image_base_name
 
         sp.check_call(
-            "docker build -f {} . -t {}".format(dockerfile, image_base_name),
-            shell=True,
+            f"docker build -f {dockerfile} . -t {image_base_name}", shell=True
         )
 
-        self.image_name = "{}:latest".format(image_base_name)
+        self.image_name = f"{image_base_name}:latest"
 
         self.tag()
         self.push()
@@ -252,12 +240,10 @@ class DockerImageBuilder:
         self.full_image_name = self.image_name
 
     def push(self):
-        sp.check_call(
-            "docker push {}".format(self.full_image_name), shell=True,
-        )
+        sp.check_call(f"docker push {self.full_image_name}", shell=True)
 
     def docker_tag(self, in_name, out_name):
-        sp.check_call("docker tag {} {}".format(in_name, out_name), shell=True)
+        sp.check_call(f"docker tag {in_name} {out_name}", shell=True)
 
 
 class AWSImageBuilder(DockerImageBuilder):
@@ -268,7 +254,7 @@ class AWSImageBuilder(DockerImageBuilder):
 
     def tag(self):
         image_name = self.image_name
-        full_image_name = "{}/{}".format(self.registry, self.image_name)
+        full_image_name = f"{self.registry}/{self.image_name}"
 
         self.docker_tag(image_name, full_image_name)
 
@@ -277,8 +263,7 @@ class AWSImageBuilder(DockerImageBuilder):
 
     def need_new_repo(self):
         output = sp.check_output(
-            "aws ecr describe-repositories --region {}".format(self.region),
-            shell=True,
+            f"aws ecr describe-repositories --region {self.region}", shell=True
         )
         res = json.loads(output)
 
@@ -286,19 +271,12 @@ class AWSImageBuilder(DockerImageBuilder):
             return True
 
         repos = res["repositories"]
-        for repo in repos:
-            # use self.image_base_name as repo name
-            if repo["repositoryName"] == self.image_base_name:
-                return False
-
-        return True
+        return all(repo["repositoryName"] != self.image_base_name for repo in repos)
 
     def create_repo_if_needed(self):
         if self.need_new_repo():
             sp.check_call(
-                "aws ecr create-repository --region {} --repository-name {}".format(
-                    self.region, self.image_base_name
-                ),
+                f"aws ecr create-repository --region {self.region} --repository-name {self.image_base_name}",
                 shell=True,
             )
 
@@ -311,11 +289,7 @@ class AWSImageBuilder(DockerImageBuilder):
             super().push()
         except sp.CalledProcessError:
             raise RuntimeError(
-                "Failed to push images {}. "
-                "Most likely your authorization token has expired. \nPlease run "
-                '"aws ecr get-login-password --region {} | docker login --username AWS --password-stdin {}" to authenticate'.format(
-                    self.full_image_name, self.region, self.registry
-                )
+                f'Failed to push images {self.full_image_name}. Most likely your authorization token has expired. \nPlease run "aws ecr get-login-password --region {self.region} | docker login --username AWS --password-stdin {self.registry}" to authenticate'
             )
 
 
@@ -327,7 +301,7 @@ class GCPImageBuilder(DockerImageBuilder):
         image_name = self.image_name
         proj = get_default_project_gcp()
 
-        full_image_name = "{}/{}/{}".format(self.registry, proj, image_name)
+        full_image_name = f"{self.registry}/{proj}/{image_name}"
         self.docker_tag(image_name, full_image_name)
 
         self.full_image_name = full_image_name
@@ -346,11 +320,7 @@ class GCPImageBuilder(DockerImageBuilder):
 def run(attach, image, gpu, cpu, memory, volume, args):
     """Run a command on a kubernetes cluster with fiber."""
     platform = CONFIG["platform"]
-    print(
-        'Running "{}" on Kubernetes cluster ({}) '.format(
-            " ".join(args), platform
-        )
-    )
+    print(f'Running "{" ".join(args)}" on Kubernetes cluster ({platform}) ')
 
     if image:
         full_image_name = image
@@ -367,7 +337,7 @@ def run(attach, image, gpu, cpu, memory, volume, args):
                 )
             builder = AWSImageBuilder(registry)
         else:
-            raise ValueError('Unknow platform "{}"'.format(platform))
+            raise ValueError(f'Unknow platform "{platform}"')
 
         full_image_name = builder.build()
 
@@ -396,7 +366,7 @@ def run(attach, image, gpu, cpu, memory, volume, args):
     pod_name = job.data.metadata.name
     exitcode = 0
 
-    print("Created pod: {}".format(pod_name))
+    print(f"Created pod: {pod_name}")
 
     if attach:
         # wait until job is running
@@ -406,29 +376,24 @@ def run(attach, image, gpu, cpu, memory, volume, args):
         )
         """
 
-        exitcode = os.system("kubectl logs -f {}".format(pod_name))
+        exitcode = os.system(f"kubectl logs -f {pod_name}")
 
-    if exitcode != 0:
-        return exitcode
-
-    return 0
+    return exitcode if exitcode != 0 else 0
 
 
 def auto_select_platform():
     platforms = detect_platforms()
     if len(platforms) > 1:
-        choice = prompt_choices(
+        return prompt_choices(
             platforms,
             "Found many providers, which provider do you want to use",
         )
     elif len(platforms) == 1:
-        choice = platforms[0]
+        return platforms[0]
     else:
-        choice = prompt_choices(
+        return prompt_choices(
             ["gcp", "aws"], "Which provider do you want to use"
         )
-
-    return choice
 
 
 @click.group()
@@ -448,13 +413,11 @@ def main(docker_registry, aws, gcp):
         CONFIG["docker_registry"] = None
 
     platforms = [aws, gcp]
-    platform_names = ["aws", "gcp"]
     n = sum(platforms)
     if n > 1:
+        platform_names = ["aws", "gcp"]
         raise ValueError(
-            'Only one of "{}" can be set'.format(
-                ", ".join(["--" + p for p in platform_names])
-            )
+            f'Only one of "{", ".join([f"--{p}" for p in platform_names])}" can be set'
         )
 
     if aws:

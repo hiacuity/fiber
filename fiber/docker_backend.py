@@ -70,31 +70,25 @@ class Backend(core.Backend):
         tty = debug
         stdin_open = debug
 
-        if job_spec.image is None:
-            image = config.default_image
-        else:
-            image = job_spec.image
-
+        image = config.default_image if job_spec.image is None else job_spec.image
         try:
             container = self.client.containers.run(
                 image,
                 job_spec.command,
-                name=job_spec.name + '-' + str(uuid.uuid4()),
+                name=f'{job_spec.name}-{str(uuid.uuid4())}',
                 volumes=volumes,
                 cap_add=["SYS_PTRACE"],
                 tty=tty,
                 stdin_open=stdin_open,
-                detach=True
+                detach=True,
             )
         except docker.errors.ImageNotFound:
             raise mp.ProcessError(
-                "Docker image \"{}\" not found or cannot be pulled from "
-                "docker registry.".format(job_spec.image))
+                f'Docker image \"{job_spec.image}\" not found or cannot be pulled from docker registry.'
+            )
 
         except docker.errors.APIError as e:
-            raise mp.ProcessError(
-                    "Failed to start docker container: {}".format(e)
-            )
+            raise mp.ProcessError(f"Failed to start docker container: {e}")
 
         job = DockerJob(container, container.id)
         # delayed
@@ -201,7 +195,7 @@ class Backend(core.Backend):
 
         if ip is None:
             raise mp.ProcessError(
-                "Can't find a usable IPv4 address to listen. ifce_name: {}, "
-                "ifces: {}".format(ifce, psutil.net_if_addrs()))
+                f"Can't find a usable IPv4 address to listen. ifce_name: {ifce}, ifces: {psutil.net_if_addrs()}"
+            )
         # use 0 to bind to a random free port number
         return ip, 0, ifce

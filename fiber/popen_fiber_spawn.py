@@ -167,9 +167,7 @@ class Popen(object):
             _event_dict.pop(self.ident, None)
 
     def __repr__(self):
-        return "<{}({})>".format(
-            type(self).__name__, getattr(self, "process_obj", None)
-        )
+        return f'<{type(self).__name__}({getattr(self, "process_obj", None)})>'
 
     def __init__(self, process_obj, backend=None, launch=False):
         self.returncode = None
@@ -296,7 +294,7 @@ class Popen(object):
         # returns None if the process is not stopped yet. Otherwise, returns
         # process exit code.
         if flag != os.WNOHANG:
-            raise NotImplementedError("flag {} is not supported".format(flag))
+            raise NotImplementedError(f"flag {flag} is not supported")
 
         # no need to wait here. get_job_status will be called later
         # if self._exiting:
@@ -371,6 +369,8 @@ class Popen(object):
             # in active mode, port is admin_port which could be 0 at first and
             # set to the actual port by the backend thread
             port = admin_port
+            assert admin_host is not None
+            assert port is not None
         else:
             # in passive mode, port can't be 0 because this need to be
             # pre-determined information between master and workers.
@@ -380,10 +380,6 @@ class Popen(object):
                 "and workers."
             )
             port = self.worker_port
-
-        if config.ipc_active:
-            assert admin_host is not None
-            assert admin_port is not None
 
         cmd = self.get_command_line(
             cwd=os.getcwd(), host=admin_host, port=port, id=ident

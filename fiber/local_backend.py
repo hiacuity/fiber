@@ -44,11 +44,7 @@ class Backend(core.Backend):
     def get_job_status(self, job):
         proc = job.data
 
-        if proc.poll() is not None:
-            # subprocess has terminated
-            return ProcessStatus.STOPPED
-
-        return ProcessStatus.STARTED
+        return ProcessStatus.STARTED if proc.poll() is None else ProcessStatus.STOPPED
 
     def wait_for_job(self, job, timeout):
         proc = job.data

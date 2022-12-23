@@ -72,7 +72,7 @@ def safe_join_worker(proc):
     p = proc
     if p.is_alive():
         # worker has not yet exited
-        logger.debug('cleaning up worker %s' % p.pid)
+        logger.debug(f'cleaning up worker {p.pid}')
 
         p.join(5)
 
@@ -132,13 +132,12 @@ def mp_worker_core(inqueue, outqueue, maxtasks=None, wrap_exception=False):
             put((job, i, result))
         except Exception as e:
             wrapped = MaybeEncodingError(e, result[1])
-            logger.debug("Possible encoding error while sending result: %s" % (
-                wrapped))
+            logger.debug(f"Possible encoding error while sending result: {wrapped}")
             put((job, i, (False, wrapped)))
 
         task = job = result = func = args = kwds = None
         completed += 1
-    logger.debug('worker exiting after %s tasks' % completed)
+    logger.debug(f'worker exiting after {completed} tasks')
 
 
 def mp_worker(inqueue, outqueue, initializer=None, initargs=(), maxtasks=None,
@@ -158,7 +157,7 @@ def mp_worker(inqueue, outqueue, initializer=None, initargs=(), maxtasks=None,
         initializer(*initargs)
 
     workers = []
-    for i in range(num_workers):
+    for _ in range(num_workers):
         # Use fork context to make sure that imported modules and other things
         # are shared. This is useful when modules share objects between
         # processes.
@@ -462,7 +461,7 @@ class ClassicPool(mp_pool.Pool):
             # tell workers there is no more work
             logger.debug('_handle_tasks: task handler sending sentinel '
                          'to workers')
-            for p in pool:
+            for _ in pool:
                 put(None)
         except OSError:
             logger.debug('_handle_tasks: task handler got OSError when '
@@ -520,7 +519,7 @@ class ClassicPool(mp_pool.Pool):
             # attempts to add the sentinel (None) to outqueue may
             # block.  There is guaranteed to be no more than 2 sentinels.
             try:
-                for i in range(10):
+                for _ in range(10):
                     if not outqueue._reader.poll():
                         break
                     get()
@@ -714,16 +713,15 @@ class Inventory():
             seq, _, i, result = self._queue_get()
             self._inventory[seq][i] = result
 
-            if seq == job_seq:
-                if i == idx:
-                    # got the next one
-                    res = self._inventory[job_seq][i]
-                    self._inventory[job_seq][i] = None
+            if seq == job_seq and i == idx:
+                # got the next one
+                res = self._inventory[job_seq][i]
+                self._inventory[job_seq][i] = None
 
-                    idx += 1
-                    self._spec[job_seq] = idx
+                idx += 1
+                self._spec[job_seq] = idx
 
-                    yield res
+                yield res
 
         return
 
@@ -775,11 +773,8 @@ def zpool_worker_core(master_conn, result_conn, maxtasksperchild,
     """
     logger.debug("zpool_worker_core started %s", rank)
 
-    proc = None
     ident = secrets.token_bytes(4)
-    if req:
-        proc = current_process()
-
+    proc = current_process() if req else None
     while True:
         if req:
             # master_conn is a REQ type socket, need to send id (rank) to
@@ -801,12 +796,12 @@ def zpool_worker_core(master_conn, result_conn, maxtasksperchild,
         if starmap:
             for i, arg_item in enumerate(arg_list):
                 nargs = len(arg_item)
-                if nargs == 2:
-                    args, kwds = arg_item
-                    res = func(*args, **kwds)
-                elif nargs == 1:
+                if nargs == 1:
                     args = arg_item[0]
                     res = func(*args)
+                elif nargs == 2:
+                    args, kwds = arg_item
+                    res = func(*args, **kwds)
                 else:
                     raise ValueError("Bad number of args, %s %s",
                                      nargs, arg_item)
@@ -909,13 +904,13 @@ class ZPool():
 
         socket = Socket(mode=master_sock_type)
         _master_port = socket.bind()
-        _master_addr = 'tcp://{}:{}'.format(ip, _master_port)
+        _master_addr = f'tcp://{ip}:{_master_port}'
         self._master_addr = _master_addr
         self._master_sock = socket
 
         socket = Socket(mode="r")
         _result_port = socket.bind()
-        _result_addr = 'tcp://{}:{}'.format(ip, _result_port)
+        _result_addr = f'tcp://{ip}:{_result_port}'
         self._result_addr = _result_addr
         self._result_sock = socket
 
@@ -943,11 +938,7 @@ class ZPool():
         self._task_handler = td
 
     def __repr__(self):
-        return "<{}({}, {})>".format(
-            type(self).__name__,
-            getattr(self, "_processes", None),
-            getattr(self, "_master_addr", None),
-        )
+        return f'<{type(self).__name__}({getattr(self, "_processes", None)}, {getattr(self, "_master_addr", None)})>'
 
     def _handle_tasks(self):
         taskq = self.taskq
@@ -968,9 +959,7 @@ class ZPool():
     def _res_get(self):
         payload = self._result_sock.recv()
         self.recv_tasks += 1
-        data = pickle.loads(payload)
-
-        return data
+        return pickle.loads(payload)
 
     @staticmethod
     def _join_exited_workers(workers):
@@ -1019,11 +1008,7 @@ class ZPool():
         threads = []
         while left > 0 and thread._state == RUN:
 
-            if left > workers_per_fp:
-                n = workers_per_fp
-            else:
-                n = left
-
+            n = workers_per_fp if left > workers_per_fp else left
             master_conn = LazyZConnection(("r", master_addr))
             result_conn = LazyZConnection(("w", result_addr))
             master_conn.set_name("master_conn")
@@ -1111,27 +1096,24 @@ class ZPool():
 
         seq = self._inventory.add(1)
         self._task_put((seq, 0, func, [(args, kwds)], True))
-        res = ApplyResult(seq, self._inventory)
-
-        return res
+        return ApplyResult(seq, self._inventory)
 
     def start_workers(self):
         self._worker_handler.start()
         self._worker_handler_started = True
 
     def lazy_start_workers(self, func):
-        if hasattr(func, "__fiber_meta__"):
-            if (
-                not hasattr(zpool_worker, "__fiber_meta__")
-                or zpool_worker.__fiber_meta__ != func.__fiber_meta__
-            ):
-                if self._worker_handler_started:
-                    raise RuntimeError(
-                        "Cannot run function that has different resource "
-                        "requirements acceptable by this pool. Try creating a "
-                        "different pool for it."
-                    )
-                zpool_worker.__fiber_meta__ = func.__fiber_meta__
+        if hasattr(func, "__fiber_meta__") and (
+            not hasattr(zpool_worker, "__fiber_meta__")
+            or zpool_worker.__fiber_meta__ != func.__fiber_meta__
+        ):
+            if self._worker_handler_started:
+                raise RuntimeError(
+                    "Cannot run function that has different resource "
+                    "requirements acceptable by this pool. Try creating a "
+                    "different pool for it."
+                )
+            zpool_worker.__fiber_meta__ = func.__fiber_meta__
 
         if not self._worker_handler_started:
             self.start_workers()
@@ -1179,9 +1161,7 @@ class ZPool():
         chunks = self.__class__._chunks(iterable, chunksize)
         for batch, chunk in enumerate(chunks):
             self._task_put((seq, batch * chunksize, func, chunk, False))
-        res = MapResult(seq, self._inventory)
-
-        return res
+        return MapResult(seq, self._inventory)
 
     def apply(self, func, args=(), kwds={}):
         """
@@ -1300,9 +1280,7 @@ class ZPool():
         for batch, chunk in enumerate(chunks):
             self._task_put((seq, batch * chunksize, func, chunk, True))
 
-        res = MapResult(seq, self._inventory)
-
-        return res
+        return MapResult(seq, self._inventory)
 
     def starmap(self, func, iterable, chunksize=None):
         """
@@ -1331,7 +1309,7 @@ class ZPool():
 
     def _send_sentinels_to_workers(self):
         logger.debug('send sentinels(None) to workers %s', self)
-        for i in range(self._processes):
+        for _ in range(self._processes):
             self._task_put(None)
 
     def close(self):
@@ -1544,13 +1522,11 @@ class ResilientZPool(ZPool):
         # tell peers to exit
         data = pickle.dumps(None)
         #print("send sentinals to workers, active peers", self.active_peer_list)
-        for i in range(len(self._pool)):
+        for _ in range(len(self._pool)):
             #print("waiting for requests")
             msg = master_sock.recv()
             #print("got ", msg)
             master_sock.send(data)
-            #print("send ", data)
-
         #print("exiting handle_tasks ")
         logger.debug('ResilientZPool _handle_tasks exited')
 
@@ -1568,11 +1544,7 @@ class ResilientZPool(ZPool):
         threads = []
         while left > 0 and thread._state == RUN:
 
-            if left > workers_per_fp:
-                n = workers_per_fp
-            else:
-                n = left
-
+            n = workers_per_fp if left > workers_per_fp else left
             master_conn = LazyZConnection(("req", master_addr))
             result_conn = LazyZConnection(("w", result_addr))
 

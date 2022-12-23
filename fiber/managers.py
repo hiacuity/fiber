@@ -169,7 +169,7 @@ class BaseManager(multiprocessing.managers.BaseManager):
                   self._serializer, writer, initializer, initargs),
         )
         ident = ':'.join(str(i) for i in self._process._identity)
-        self._process.name = type(self).__name__ + '-' + ident
+        self._process.name = f'{type(self).__name__}-{ident}'
         self._process.start()
 
         # get address of server
@@ -292,13 +292,12 @@ class BaseProxy(multiprocessing.managers.BaseProxy):
         if get_spawning_popen() is not None:
             kwds['authkey'] = self._authkey
 
-        if getattr(self, '_isauto', False):
-            kwds['exposed'] = self._exposed_
-            return (RebuildProxy,
-                    (AutoProxy, self._token, self._serializer, kwds))
-        else:
+        if not getattr(self, '_isauto', False):
             return (RebuildProxy,
                     (type(self), self._token, self._serializer, kwds))
+        kwds['exposed'] = self._exposed_
+        return (RebuildProxy,
+                (AutoProxy, self._token, self._serializer, kwds))
 
 
 def AutoProxy(token, serializer, manager=None, authkey=None,
@@ -318,7 +317,7 @@ def AutoProxy(token, serializer, manager=None, authkey=None,
     if authkey is None:
         authkey = process.current_process().authkey
 
-    ProxyType = MakeProxyType('AutoProxy[%s]' % token.typeid, exposed)
+    ProxyType = MakeProxyType(f'AutoProxy[{token.typeid}]', exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
                       incref=incref)
     proxy._isauto = True
@@ -495,7 +494,7 @@ def AsyncAutoProxy(token, serializer, manager=None, authkey=None,
     if authkey is None:
         authkey = process.current_process().authkey
 
-    ProxyType = MakeAsyncProxyType('AutoProxy[%s]' % token.typeid, exposed)
+    ProxyType = MakeAsyncProxyType(f'AutoProxy[{token.typeid}]', exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
                       incref=incref)
     proxy._isauto = True
