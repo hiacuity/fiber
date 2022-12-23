@@ -45,12 +45,13 @@ def bench_fiber(tasks, workers, task_duration, warmup=True, pool=None):
     if warmup:
         if not pool:
             pool = fiber.Pool(workers)
-        pool.map(sleep_worker, [task_duration for x in range(tasks)],
-                 chunksize=1)
+        pool.map(sleep_worker, [task_duration for _ in range(tasks)], chunksize=1)
         logger.debug("warm up finished")
 
     res, elapsed = timeit(
-        pool.map, sleep_worker, [task_duration for x in range(tasks)],
+        pool.map,
+        sleep_worker,
+        [task_duration for _ in range(tasks)],
         chunksize=1,
     )
 
@@ -85,13 +86,14 @@ def bench_mp(tasks, workers, task_duration, warmup=True):
     if warmup:
         logger.debug("warming up")
         pool = mp.Pool(workers)
-        pool.map(sleep_worker, [task_duration for x in range(tasks)],
-                 chunksize=1)
+        pool.map(sleep_worker, [task_duration for _ in range(tasks)], chunksize=1)
         logger.debug("warm up finished")
 
     res, elapsed = timeit(
-        pool.map, sleep_worker, [task_duration for x in range(tasks)],
-        chunksize=1
+        pool.map,
+        sleep_worker,
+        [task_duration for _ in range(tasks)],
+        chunksize=1,
     )
 
     return elapsed
@@ -120,13 +122,13 @@ def bench_mp_seq(tasks, workers, task_duration, warmup=True, pool=None):
 
 
 def pyspark_parallel(sc, tasks, task_duration):
-    nums = sc.parallelize([task_duration for i in range(tasks)])
+    nums = sc.parallelize([task_duration for _ in range(tasks)])
     nums.map(sleep_worker).collect()
 
 
 def pyspark_parallel_seq(sc, tasks, task_duration, workers):
-    for i in range(tasks // workers):
-        nums = sc.parallelize([task_duration for i in range(workers)])
+    for _ in range(tasks // workers):
+        nums = sc.parallelize([task_duration for _ in range(workers)])
         nums.map(sleep_worker).collect()
 
 
@@ -234,7 +236,7 @@ def main():
 
     for framework in frameworks:
         results[framework] = []
-        results[framework + "_seq"] = []
+        results[f"{framework}_seq"] = []
 
     if "pyspark" in frameworks:
         from pyspark import SparkContext
@@ -277,10 +279,7 @@ def main():
         tasks = int(max_duration * workers / duration)
 
         print(
-            "Benchmarking {} workers with {} tasks each takes {} "
-            "seconds".format(
-                workers, tasks, duration
-            )
+            f"Benchmarking {workers} workers with {tasks} tasks each takes {duration} seconds"
         )
 
         # sequential tests (simulating RL)

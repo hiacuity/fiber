@@ -12,7 +12,7 @@ def main():
     pool = fiber.Pool(4)
     counts = pool.map(line_count, files)
     for f, c in zip(files, counts):
-        print("{}\t{}".format(f, c))
+        print(f"{f}\t{c}")
 
 
 if __name__ == '__main__':

@@ -37,7 +37,7 @@ def double_queue_worker(args):
     # instructions, returns = SUBPROC_QUEUES[i]
     assert instructions is not None
     assert returns is not None
-    returns.put('READY {}'.format(i))
+    returns.put(f'READY {i}')
     print('[worker]PUT READY', i)
 
     while True:
@@ -49,7 +49,7 @@ def double_queue_worker(args):
             #print('[worker]got QUIT exiting', i)
             break
 
-        returns.put("ACK {}".format(i))
+        returns.put(f"ACK {i}")
         print('[worker]PUT ACK', i)
 
 
@@ -69,7 +69,7 @@ def random_error_worker(i):
 
 def is_inside(p):
     x, y = random.random(), random.random()
-    return x * x + y * y < 1
+    return x**2 + y**2 < 1
 
 class TestPool():
     @pytest.fixture(autouse=True)
@@ -95,7 +95,7 @@ class TestPool():
 
         # explicitly start workers instead of lazy start
         pool.start_workers()
-        res = pool.map(f, [i for i in range(1000)])
+        res = pool.map(f, list(range(1000)))
 
         pool.wait_until_workers_up()
 
@@ -120,11 +120,11 @@ class TestPool():
 
     def test_pool_imap(self):
         pool = Pool(4)
-        res_iter = pool.imap(f, [x for x in range(100)], 1)
+        res_iter = pool.imap(f, list(range(100)), 1)
         res = list(res_iter)
         assert res == [x * x for x in range(100)]
 
-        res_iter = pool.imap_unordered(f, [x for x in range(100)], 1)
+        res_iter = pool.imap_unordered(f, list(range(100)), 1)
         res = list(res_iter)
         assert len(res) == 100
         res.sort()
@@ -167,7 +167,7 @@ class TestPool():
             # wait for all the workers to start
             pool.wait_until_workers_up()
 
-            res = pool.map(get_proc_name, [i for i in range(4)], chunksize=1)
+            res = pool.map(get_proc_name, list(range(4)), chunksize=1)
             pool.terminate()
             pool.join()
             res.sort()
@@ -259,7 +259,7 @@ class TestPool():
         pool.wait_until_workers_up()
 
         res = [None] * workers
-        for i in range(tasks // workers):
+        for _ in range(tasks // workers):
             for j in range(workers):
                 handle = pool.apply_async(sleep_worker, (duration,))
                 res[j] = handle
@@ -272,9 +272,9 @@ class TestPool():
     def test_pi_estimation(self):
         pool = Pool(processes=4)
         NUM_SAMPLES = int(1e6)
-        pi = 4.0 * sum(pool.map(is_inside, range(0, NUM_SAMPLES))) / NUM_SAMPLES
-        assert 3 < pi and pi < 4
-        print("Pi is roughly {}".format(pi))
+        pi = 4.0 * sum(pool.map(is_inside, range(NUM_SAMPLES))) / NUM_SAMPLES
+        assert 3 < pi < 4
+        print(f"Pi is roughly {pi}")
 
         pool.terminate()
         pool.join()
@@ -285,11 +285,9 @@ class TestPool():
             # explicitly start workers instead of lazy start
             pool.start_workers()
             pool.wait_until_workers_up()
-            res = pool.map(
-                random_error_worker, [i for i in range(300)], chunksize=1
-            )
+            res = pool.map(random_error_worker, list(range(300)), chunksize=1)
 
-            assert res == [i for i in range(300)]
+            assert res == list(range(300))
 
         finally:
             pool.terminate()
@@ -302,13 +300,11 @@ class TestPool():
             pool.start_workers()
             pool.wait_until_workers_up()
             res_iter = pool.imap_unordered(
-                random_error_worker, [i for i in range(300)], chunksize=1
+                random_error_worker, list(range(300)), chunksize=1
             )
 
-            res = list(res_iter)
-            res.sort()
-
-            assert res == [i for i in range(300)]
+            res = sorted(res_iter)
+            assert res == list(range(300))
 
         finally:
             pool.terminate()
@@ -320,5 +316,3 @@ class TestPool():
         p.map(print, [1, 2, 3, 4])
         p.terminate()
         p.join()
-
-        assert 1 == 1

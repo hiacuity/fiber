@@ -108,15 +108,13 @@ class Ring:
         if self.size <= 0:
             return
 
-        procs = []
         rank = self.rank
         # Start process rank 0
         self.rank = 0
         ctx = mp.get_context("spawn")
         p = ctx.Process(target=self._target)
         p.start()
-        procs.append(p)
-
+        procs = [p]
         for i in range(1, self.size):
             self.rank = i
             p = fiber.Process(target=self._target)

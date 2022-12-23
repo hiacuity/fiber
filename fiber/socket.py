@@ -38,7 +38,7 @@ elif socket_lib == "zmq":
     import zmq
     import zmq.devices
 else:
-    raise ValueError("bad socket_lib value: {}".format(socket_lib))
+    raise ValueError(f"bad socket_lib value: {socket_lib}")
 
 
 def get_ctx():
@@ -50,7 +50,7 @@ def bind_to_random_port(sock, addr_base, max_tries=100, nng=True):
     while num_tries < max_tries:
         try:
             port = random.randint(MIN_PORT, MAX_PORT)
-            addr = "{}:{}".format(addr_base, port)
+            addr = f"{addr_base}:{port}"
             if nng:
                 sock.listen(addr)
             else:
@@ -98,9 +98,7 @@ class ZMQContext(SockContext):
 
     def new(self, mode):
         sock_type = self._mode_to_type[mode]
-        if sock_type is None:
-            return None
-        return self.context.socket(sock_type)
+        return None if sock_type is None else self.context.socket(sock_type)
 
     @staticmethod
     def bind_random(sock, addr):
@@ -118,7 +116,7 @@ class ZMQContext(SockContext):
         backend = get_backend()
         ip_ext, _, _ = backend.get_listen_addr()
         ip_bind = "0.0.0.0"
-        addr_bind = "tcp://{}".format(ip_bind)
+        addr_bind = f"tcp://{ip_bind}"
 
         s1_type = self._mode_to_type[s1_mode]
         s2_type = self._mode_to_type[s2_mode]
@@ -130,8 +128,8 @@ class ZMQContext(SockContext):
         _reader_port = device.bind_out_to_random_port(
             addr_bind, min_port=MIN_PORT, max_port=MAX_PORT, max_tries=100
         )
-        _reader_ext_addr = "tcp://{}:{}".format(ip_ext, _reader_port)
-        _writer_ext_addr = "tcp://{}:{}".format(ip_ext, _writer_port)
+        _reader_ext_addr = f"tcp://{ip_ext}:{_reader_port}"
+        _writer_ext_addr = f"tcp://{ip_ext}:{_writer_port}"
         return device, _reader_ext_addr, _writer_ext_addr
 
 
@@ -246,7 +244,7 @@ class NNGDevice:
         self.conn.send("#start")
         code = self.conn.recv()
         if code is not None:
-            raise RuntimeError("Failed to start NNGDevice, {}".format(code))
+            raise RuntimeError(f"Failed to start NNGDevice, {code}")
 
 
 class NNGContext(SockContext):
@@ -264,9 +262,7 @@ class NNGContext(SockContext):
 
     def new(self, mode):
         func = self._mode_to_creator[mode]
-        if func is None:
-            return None
-        return func()
+        return None if func is None else func()
 
     @staticmethod
     def bind_random(sock, addr):
@@ -288,8 +284,8 @@ class NNGContext(SockContext):
         backend = get_backend()
         ip_ext, _, _ = backend.get_listen_addr()
 
-        in_addr = "tcp://{}:{}".format(ip_ext, in_port)
-        out_addr = "tcp://{}:{}".format(ip_ext, out_port)
+        in_addr = f"tcp://{ip_ext}:{in_port}"
+        out_addr = f"tcp://{ip_ext}:{out_port}"
 
         return device, in_addr, out_addr
 
@@ -336,9 +332,7 @@ class NanomsgContext(SockContext):
     def new(self, mode):
 
         sock_type = self._mode_to_type[mode]
-        if sock_type is None:
-            return None
-        return nnpy.Socket(nnpy.AF_SP, sock_type)
+        return None if sock_type is None else nnpy.Socket(nnpy.AF_SP, sock_type)
 
     @staticmethod
     def bind_random(sock, addr):
@@ -360,8 +354,8 @@ class NanomsgContext(SockContext):
         backend = get_backend()
         ip_ext, _, _ = backend.get_listen_addr()
 
-        in_addr = "tcp://{}:{}".format(ip_ext, in_port)
-        out_addr = "tcp://{}:{}".format(ip_ext, out_port)
+        in_addr = f"tcp://{ip_ext}:{in_port}"
+        out_addr = f"tcp://{ip_ext}:{out_port}"
 
         return device, in_addr, out_addr
 
@@ -373,23 +367,21 @@ elif socket_lib == "nng":
 elif socket_lib == "zmq":
     default_socket_ctx = ZMQContext()
 else:
-    raise ValueError("bad socket_lib value: {}".format(socket_lib))
+    raise ValueError(f"bad socket_lib value: {socket_lib}")
 
 
 class Socket:
     def __repr__(self):
-        return "{}<{},{}>".format(
-            self.__class__.__name__,
-            self._ctx.__class__.__name__,
-            self._mode)
+        return f"{self.__class__.__name__}<{self._ctx.__class__.__name__},{self._mode}>"
 
     def __init__(self, ctx=get_ctx(), mode="rw"):
         self._mode = mode
         self._ctx = ctx
         self._sock = ctx.new(mode)
         if self._sock is None:
-            raise ValueError("Socket mode \"{}\" not supported by {}".format(
-                mode, ctx.__class__.__name__))
+            raise ValueError(
+                f'Socket mode \"{mode}\" not supported by {ctx.__class__.__name__}'
+            )
 
     def send(self, data):
         self._sock.send(data)
@@ -400,9 +392,7 @@ class Socket:
     def bind(self):
         addr = self._ctx.default_addr
         bind_random = self._ctx.bind_random
-        port = bind_random(self._sock, addr)
-
-        return port
+        return bind_random(self._sock, addr)
 
     def connect(self, addr):
         _connect = self._ctx.connect

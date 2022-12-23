@@ -26,8 +26,14 @@ def es(theta0, worker, workers=40, sigma=0.1, alpha=0.05, iterations=200):
         epsilons = [ret[1] for ret in returns]
         # normalize rewards
         normalized_rewards = (rewards - np.mean(rewards)) / np.std(rewards)
-        theta = theta + alpha * 1.0 / (workers * sigma) * sum(
-            [reward * epsilon for reward, epsilon in zip(normalized_rewards, epsilons)]
+        theta = theta + (
+            alpha
+            * 1.0
+            / (workers * sigma)
+            * sum(
+                reward * epsilon
+                for reward, epsilon in zip(normalized_rewards, epsilons)
+            )
         )
         if t % 10 == 0:
             print(theta)

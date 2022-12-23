@@ -35,7 +35,7 @@ def init_logger(config, proc_name=None):
             p = fiber.process.current_process()
             proc_name = p.name
 
-        log_file = config.log_file + '.' + proc_name
+        log_file = f'{config.log_file}.{proc_name}'
         handler = logging.FileHandler(log_file, mode="w")
 
     formatter = logging.Formatter(
@@ -64,7 +64,7 @@ def init_fiber(proc_name=None, **kwargs):
         if (backend not in fiber_backend.available_backend
            and backend is not None):
 
-            raise mp.ProcessError("Invalid backend: {}".format(backend))
+            raise mp.ProcessError(f"Invalid backend: {backend}")
 
     updates = fiber_config.init(**kwargs)
 

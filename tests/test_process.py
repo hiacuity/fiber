@@ -75,9 +75,10 @@ class TestBasic():
 
     def test_multi_processes(self):
         n = 3
-        procs = []
-        for i in range(n):
-            procs.append(Process(target=func_add, args=(42, 89), name="test_multi_processes"))
+        procs = [
+            Process(target=func_add, args=(42, 89), name="test_multi_processes")
+            for _ in range(n)
+        ]
         for p in procs:
             p.start()
         for p in procs:
@@ -157,9 +158,7 @@ class TestBasic():
     def test_exitcode(self):
         p = Process(target=func_add, args=(42, 89), name="test_terminate")
         p.start()
-        while True:
-            if p.exitcode is not None:
-                break
+        while p.exitcode is None:
             time.sleep(1)
         assert p.exitcode == 0
 

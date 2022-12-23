@@ -30,11 +30,10 @@ def find_version(*file_paths):
     basedir = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(basedir, *file_paths)) as fp:
         content = fp.read()
-        version_match = re.search(
+        if version_match := re.search(
             r"^__version__ = ['\"]([^'\"]*)['\"]", content, re.M
-        )
-        if version_match:
-            return version_match.group(1)
+        ):
+            return version_match[1]
 
         raise RuntimeError("Version string not found.")
 

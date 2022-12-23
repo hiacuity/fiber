@@ -43,8 +43,7 @@ def main():
     results = multiprocess(4, x_2Dgauss, point_x, widths)
 
     for r in results:
-        print('h = %s, p(x) = %s' % (r[0], r[1]))
-    pass
+        print(f'h = {r[0]}, p(x) = {r[1]}')
 
 
 if __name__ == '__main__':

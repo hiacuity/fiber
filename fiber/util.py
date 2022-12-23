@@ -36,8 +36,7 @@ def register_after_fork(obj, func):
 
 def _run_after_forkers():
     logging.debug('_fun_after_forkers called')
-    items = list(_afterfork_registry.items())
-    items.sort()
+    items = sorted(_afterfork_registry.items())
     for (index, ident, func), obj in items:
         try:
             logging.debug('run after forker %s(%s)', func, obj)
@@ -78,8 +77,7 @@ def find_ip_by_net_interface(target_interface):
             for snicaddr in addrs:
                 # IPv4 only
                 if snicaddr.family == socket.AF_INET:
-                    ip = snicaddr.address
-                    return ip
+                    return snicaddr.address
     return None
 
 
@@ -125,7 +123,4 @@ def find_listen_address():
 
 
 def is_in_interactive_console():
-    if hasattr(sys, 'ps1'):
-        return True
-
-    return False
+    return bool(hasattr(sys, 'ps1'))

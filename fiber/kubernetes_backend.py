@@ -79,16 +79,10 @@ class Backend(core.Backend):
 
     def _get_resource_requirements(self, job_spec):
         #requests = {}
-        limits = {}
-
-        if job_spec.cpu:
-            limits["cpu"] = str(job_spec.cpu)
-        else:
-            # by default, allocate 1 cpu
-            limits["cpu"] = str(1)
+        limits = {"cpu": str(job_spec.cpu) if job_spec.cpu else str(1)}
 
         if job_spec.mem:
-            limits["memory"] = str(job_spec.mem) + "Mi"
+            limits["memory"] = f"{str(job_spec.mem)}Mi"
 
         if job_spec.gpu:
             limits["nvidia.com/gpu"] = str(job_spec.gpu)
@@ -104,10 +98,7 @@ class Backend(core.Backend):
     def create_job(self, job_spec):
         logger.debug("[k8s]create_job: %s", job_spec)
         body = client.V1Pod()
-        name = "{}-{}".format(
-            job_spec.name.replace("_", "-").lower(),
-            str(uuid.uuid4())[:8]
-        )
+        name = f'{job_spec.name.replace("_", "-").lower()}-{str(uuid.uuid4())[:8]}'
         body.metadata = client.V1ObjectMeta(
             namespace=self.default_namespace, name=name
         )
@@ -115,15 +106,14 @@ class Backend(core.Backend):
         # set environment varialbes
         # TODO(jiale) add environment variables
 
-        image = job_spec.image if job_spec.image else self.current_image
+        image = job_spec.image or self.current_image
 
         container = client.V1Container(
             name=name, image=image, command=job_spec.command, env=[],
             stdin=True, tty=True,
         )
 
-        rr = self._get_resource_requirements(job_spec)
-        if rr:
+        if rr := self._get_resource_requirements(job_spec):
             logger.debug(
                 "[k8s]create_job, container resource requirements: %s",
                 job_spec
@@ -145,10 +135,7 @@ class Backend(core.Backend):
                 pvc = client.V1PersistentVolumeClaimVolumeSource(
                     claim_name=pd_name
                 )
-                volume = client.V1Volume(
-                    persistent_volume_claim=pvc,
-                    name="volume-" + pd_name,
-                )
+                volume = client.V1Volume(persistent_volume_claim=pvc, name=f"volume-{pd_name}")
                 volumes.append(volume)
                 mount = client.V1VolumeMount(
                     mount_path=mount_info["bind"],
@@ -189,8 +176,7 @@ class Backend(core.Backend):
             )
             return ProcessStatus.STOPPED
 
-        container_statuses = v1pod.status.container_statuses
-        if container_statuses:
+        if container_statuses := v1pod.status.container_statuses:
             # container_statuses[0].state.terminated is updated faster than pod_status.phase
             if container_statuses[0].state.terminated:
                 return ProcessStatus.STOPPED
@@ -249,8 +235,9 @@ class Backend(core.Backend):
             logger.debug("[k8s]wait_for_job done: container is not terminated")
             return None
 
-        logger.debug("[k8s]wait_for_job done: container terminated with "
-                     "code: {}".format(terminated.exit_code))
+        logger.debug(
+            f"[k8s]wait_for_job done: container terminated with code: {terminated.exit_code}"
+        )
         return terminated.exit_code
 
     def terminate_job(self, job):
@@ -294,8 +281,7 @@ class Backend(core.Backend):
         # ip = find_ip_by_net_interface(ifce)
         if ip is None:
             raise mp.ProcessError(
-                "Can't find a usable IPv4 address to listen. ifce_name: {}, "
-                "ifces: {}".format(ifce, psutil.net_if_addrs())
+                f"Can't find a usable IPv4 address to listen. ifce_name: {ifce}, ifces: {psutil.net_if_addrs()}"
             )
         # use 0 to bind to a random free port number
         return ip, 0, ifce

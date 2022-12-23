@@ -64,7 +64,7 @@ def spawn_prepare(fd):
         post_data = reduction.pickle.load(from_parent_r)
 
     except Exception as e:
-        print("error", str(e))
+        print("error", e)
         raise e
 
     # start watching thread so that when master quits, worker also quits
@@ -75,7 +75,7 @@ def spawn_prepare(fd):
     self.ident = post_data["pid"]
     exitcode, err = self._bootstrap()
     if err:
-        print("Exception in {}:".format(self))
+        print(f"Exception in {self}:")
         print(err)
         return exitcode
 

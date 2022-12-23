@@ -79,7 +79,11 @@ class TestPopen():
         try:
             procs = []
             for i in range(4):
-                p = fiber.Process(target=time.sleep, args=(1,), name="test_launch_fiber_background_thread_{}".format(i))
+                p = fiber.Process(
+                    target=time.sleep,
+                    args=(1,),
+                    name=f"test_launch_fiber_background_thread_{i}",
+                )
                 procs.append(p)
             for p in procs:
                 p.start()
@@ -99,7 +103,7 @@ class TestPopen():
         resource.setrlimit(resource.RLIMIT_OFILE, (8192, 8192))
 
         socks = []
-        for i in range(1023):
+        for _ in range(1023):
             s = socket.socket(socket.AF_INET)
             socks.append(s)
 
